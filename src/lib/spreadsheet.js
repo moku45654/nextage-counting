@@ -5,11 +5,10 @@ function getLogicalDate() {
   return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd");
 }
 
-// 取得した動画データをスプレッドシートに書き込む関数
-function writeVideosToSheet(allVideos) {
-  if (!allVideos || allVideos.length === 0) return;
+// データをスプレッドシートに書き込む関数
+function writeToSheet(sheetName, data2D) {
+  if (!data2D || data2D.length === 0) return;
 
-  const sheetName = getLogicalDate();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(sheetName);
 
@@ -19,13 +18,7 @@ function writeVideosToSheet(allVideos) {
     sheet = ss.insertSheet(sheetName);
   }
 
-  // 最初のデータのキーをヘッダーとして利用する
-  const headers = Object.keys(allVideos[0]);
-  // データを2次元配列に変換
-  const rows = allVideos.map((video) => headers.map((key) => video[key]));
-
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  sheet.getRange(1, 1, data2D.length, data2D[0].length).setValues(data2D);
 }
 
 function clearSheetsByDates(dates) {
