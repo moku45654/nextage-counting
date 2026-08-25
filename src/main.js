@@ -11,9 +11,12 @@ function runFetchAndWrite() {
 }
 
 function runCompareAndWrite() {
-  const d1 = "2026/09/18";
-  const d2 = "2026/09/31";
-  const tagA = "本ネク新世界";
-  const data2D = compareMylistCount(d1, d2, tagA);
+  // const d1 = "2026/09/18";
+  // const d2 = "2026/09/31";
+  // const tagA = "本ネク新世界";
+  const d1 = "2026/08/22";
+  const d2 = "2026/08/23";
+  const tag = "ボカコレ2026夏ルーキー参加曲"
+  const data2D = compareMylistCount(d1, d2, tag);
   writeToSheet("比較結果", data2D);
 }
