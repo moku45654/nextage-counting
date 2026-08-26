@@ -4,6 +4,21 @@ function getVideosByTags(tags) {
 
   const endpoint =
     "https://snapshot.search.nicovideo.jp/api/v2/snapshot/video/contents/search";
+  const fields = [
+    "contentId",
+    "title",
+    "description",
+    "userId",
+    "channelId",
+    "viewCounter",
+    "mylistCounter",
+    "likeCounter",
+    "lengthSeconds",
+    "thumbnailUrl",
+    "startTime",
+    "commentCounter",
+    "tags",
+  ];
   const limit = 100;
   let offset = 0;
   let allVideos = [];
@@ -12,7 +27,7 @@ function getVideosByTags(tags) {
   const query = tags.join(" OR ");
 
   while (true) {
-    const url = `${endpoint}?q=${encodeURIComponent(query)}&targets=tagsExact&fields=contentId,title,description,userId,channelId,viewCounter,mylistCounter,likeCounter,lengthSeconds,thumbnailUrl,startTime,commentCounter,tags&_sort=-startTime&_limit=${limit}&_offset=${offset}`;
+    const url = `${endpoint}?q=${encodeURIComponent(query)}&targets=tagsExact&fields=${fields.join(",")}&_sort=-startTime&_limit=${limit}&_offset=${offset}`;
 
     const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const json = JSON.parse(response.getContentText());

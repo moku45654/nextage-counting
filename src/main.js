@@ -7,7 +7,22 @@ function runFetchAndWrite() {
     "本ネク新世界",
   ];
   const videos = getVideosByTags(tags);
-  const data2D = convertObjectsTo2DArray(videos);
+  const fields = [
+    "contentId",
+    "title",
+    "description",
+    "userId",
+    "channelId",
+    "viewCounter",
+    "mylistCounter",
+    "likeCounter",
+    "lengthSeconds",
+    "thumbnailUrl",
+    "startTime",
+    "commentCounter",
+    "tags",
+  ];
+  const data2D = convertObjectsTo2DArray(videos, fields);
   writeToSheet(getLogicalDate(), data2D);
 }
 
