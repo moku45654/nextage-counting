@@ -131,7 +131,7 @@ function aggregate(vocTags, honTag, d1, d2, sheetName, topN = 30) {
     if (b.diff.like !== a.diff.like) return b.diff.like - a.diff.like;
     return b.diff.comment - a.diff.comment;
   });
-  const topN = Math.min(topN, combined.length);
+  var topN = Math.min(topN, combined.length);
   const topList = combined.slice(0, topN);
 
   const formatRows = (list) =>
