@@ -4,6 +4,7 @@ function runFetchAndWrite() {
     "ボカコレ2026夏ルーキー参加曲",
     "ボカコレ2026夏REMIX参加曲",
     "ボカコレ2026夏ex",
+    "本ネク新世界",
   ];
   const videos = getVideosByTags(tags);
   const data2D = convertObjectsTo2DArray(videos);
@@ -16,7 +17,7 @@ function runCompareAndWrite() {
   // const tagA = "本ネク新世界";
   const d1 = "2026/08/22";
   const d2 = "2026/08/23";
-  const tag = "ボカコレ2026夏ルーキー参加曲"
+  const tag = "ボカコレ2026夏ルーキー参加曲";
   const data2D = compareMylistCount(d1, d2, tag);
   writeToSheet("比較結果", data2D);
 }
