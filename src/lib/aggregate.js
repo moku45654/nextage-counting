@@ -6,6 +6,8 @@ function aggregate(
   sheetName,
   topN = 30,
   excludeTags = [],
+  startTimeFrom = null,
+  startTimeTo = null,
 ) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet1 = ss.getSheetByName(d1);
@@ -37,6 +39,7 @@ function aggregate(
     id: headers.indexOf("contentId"),
     title: headers.indexOf("title"),
     tags: headers.indexOf("tags"),
+    startTime: headers.indexOf("startTime"),
     view: headers.indexOf("viewCounter"),
     like: headers.indexOf("likeCounter"),
     comment: headers.indexOf("commentCounter"),
@@ -48,13 +51,27 @@ function aggregate(
 
   const hasExcludeTag = (tags) => excludeTags.some((t) => tags.includes(t));
 
+  // 指定された期間内に投稿された動画かどうかを判定する関数
+  const isWithinPeriod = (startTimeStr) => {
+    if (!startTimeFrom && !startTimeTo) return true;
+    if (!startTimeStr) return false;
+    const time = new Date(startTimeStr).getTime();
+    if (startTimeFrom && time < new Date(startTimeFrom).getTime()) return false;
+    if (startTimeTo && time > new Date(startTimeTo).getTime()) return false;
+    return true;
+  };
+
   // 動画IDをキーにして、d1とd2のデータをマップに格納
   const map1 = new Map();
   for (let i = 1; i < data1.length; i++) {
     const row = data1[i];
     const id = row[idx1.id];
     const tags = String(row[idx1.tags]);
-    if (excludeSet.has(id) || hasExcludeTag(tags)) continue;
+    const startTime = idx1.startTime !== -1 ? row[idx1.startTime] : null;
+
+    if (excludeSet.has(id) || hasExcludeTag(tags) || !isWithinPeriod(startTime))
+      continue;
+
     map1.set(id, {
       title: row[idx1.title],
       tags: tags,
@@ -70,10 +87,15 @@ function aggregate(
     const row = data2[i];
     const id = row[idx2.id];
     const tags = String(row[idx2.tags]);
-    if (excludeSet.has(id) || hasExcludeTag(tags)) continue;
+    const startTime = idx2.startTime !== -1 ? row[idx2.startTime] : null;
+
+    if (excludeSet.has(id) || hasExcludeTag(tags) || !isWithinPeriod(startTime))
+      continue;
+
     map2.set(id, {
       title: row[idx2.title],
       tags: tags,
+      startTime: startTime,
       view: Number(row[idx2.view]) || 0,
       like: Number(row[idx2.like]) || 0,
       comment: Number(row[idx2.comment]) || 0,
@@ -88,16 +110,20 @@ function aggregate(
       ? honTag.some((t) => tags.includes(t))
       : tags.includes(honTag);
 
-  // X: ボカコレ＆本ネク一覧、Y: 本ネクのみ一覧
+  // listX: ボカコレ参加曲が本ネクに参加したもの
+  // listY: ボカコレに参加せず、新規曲で本ネクに参加したもの
   const listX = [];
   const listY = [];
 
+  // ボカコレ参加曲のうち、本ネクに参加したものを集める。
   map1.forEach((val1, id) => {
     // ボカコレのタグがあり、本ネクのタグもある場合はXリストに追加
     if (hasVoc(val1.tags) && hasHon(val1.tags)) {
+      // d2のデータとの差分を計算する
       const val2 = map2.get(id) || {
         title: val1.title,
         tags: val1.tags,
+        startTime: val1.startTime,
         view: 0,
         like: 0,
         comment: 0,
@@ -107,6 +133,7 @@ function aggregate(
         id,
         title: val2.title || val1.title,
         tags: val2.tags || val1.tags,
+        startTime: val2.startTime || val1.startTime,
         type: "X",
         d1: val1,
         d2: val2,
@@ -120,14 +147,17 @@ function aggregate(
     }
   });
 
+  // ボカコレに参加せず、新規曲で本ネクに参加したものを集める。
   map2.forEach((val2, id) => {
     // 本ネクのタグがあり、ボカコレのタグがない場合はYリストに追加
     if (hasHon(val2.tags) && !hasVoc(val2.tags)) {
-      const val1 = map1.get(id) || { view: 0, like: 0, comment: 0, mylist: 0 };
+      // d1のデータは存在しないので、すべて0として扱う
+      const val1 = { startTime: null, view: 0, like: 0, comment: 0, mylist: 0 };
       listY.push({
         id,
         title: val2.title,
         tags: val2.tags,
+        startTime: val2.startTime,
         type: "Y",
         d1: val1,
         d2: val2,
@@ -155,6 +185,7 @@ function aggregate(
       item.id,
       item.title,
       item.tags,
+      item.startTime,
       item.type,
       item.d1.view,
       item.d1.like,
@@ -174,6 +205,7 @@ function aggregate(
     "contentId",
     "title",
     "tags",
+    "startTime",
     "区分",
     `再生_${d1}`,
     `いいね_${d1}`,
