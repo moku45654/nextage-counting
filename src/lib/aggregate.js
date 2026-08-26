@@ -1,4 +1,12 @@
-function aggregate(vocTags, honTag, d1, d2, sheetName, topN = 30) {
+function aggregate(
+  vocTags,
+  honTag,
+  d1,
+  d2,
+  sheetName,
+  topN = 30,
+  excludeTags = [],
+) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet1 = ss.getSheetByName(d1);
   const sheet2 = ss.getSheetByName(d2);
@@ -9,10 +17,14 @@ function aggregate(vocTags, honTag, d1, d2, sheetName, topN = 30) {
   const excludeSet = new Set();
   if (excludeSheet) {
     const excludeData = excludeSheet.getDataRange().getValues();
-    // データのある1行目から開始して、空白でないIDをセットに追加
-    for (let i = 1; i < excludeData.length; i++) {
-      const id = String(excludeData[i][0]).trim();
-      if (id) excludeSet.add(id);
+    if (excludeData.length > 1) {
+      const idColIdx = excludeData[0].indexOf("contentId");
+      if (idColIdx !== -1) {
+        for (let i = 1; i < excludeData.length; i++) {
+          const id = String(excludeData[i][idColIdx]).trim();
+          if (id) excludeSet.add(id);
+        }
+      }
     }
   }
 
@@ -34,15 +46,18 @@ function aggregate(vocTags, honTag, d1, d2, sheetName, topN = 30) {
   const idx1 = getIndices(data1[0]);
   const idx2 = getIndices(data2[0]);
 
+  const hasExcludeTag = (tags) => excludeTags.some((t) => tags.includes(t));
+
   // 動画IDをキーにして、d1とd2のデータをマップに格納
   const map1 = new Map();
   for (let i = 1; i < data1.length; i++) {
     const row = data1[i];
     const id = row[idx1.id];
-    if (excludeSet.has(id)) continue;
+    const tags = String(row[idx1.tags]);
+    if (excludeSet.has(id) || hasExcludeTag(tags)) continue;
     map1.set(id, {
       title: row[idx1.title],
-      tags: String(row[idx1.tags]),
+      tags: tags,
       view: Number(row[idx1.view]) || 0,
       like: Number(row[idx1.like]) || 0,
       comment: Number(row[idx1.comment]) || 0,
@@ -54,10 +69,11 @@ function aggregate(vocTags, honTag, d1, d2, sheetName, topN = 30) {
   for (let i = 1; i < data2.length; i++) {
     const row = data2[i];
     const id = row[idx2.id];
-    if (excludeSet.has(id)) continue;
+    const tags = String(row[idx2.tags]);
+    if (excludeSet.has(id) || hasExcludeTag(tags)) continue;
     map2.set(id, {
       title: row[idx2.title],
-      tags: String(row[idx2.tags]),
+      tags: tags,
       view: Number(row[idx2.view]) || 0,
       like: Number(row[idx2.like]) || 0,
       comment: Number(row[idx2.comment]) || 0,

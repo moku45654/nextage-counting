@@ -7,7 +7,16 @@ function testAggregateAndWrite() {
     "ボカコレ2026夏ex",
   ];
   const honTag = "VOCAROCK";
+  const excludeTags = ["ボカコレ2026夏REMIX参加曲"]; // 除外するタグを指定
   const topN = 50; // 上位N曲を取得する
-  const data2D = aggregate(vocTags, honTag, d1, d2, "集計結果", topN);
+  const data2D = aggregate(
+    vocTags,
+    honTag,
+    d1,
+    d2,
+    "集計結果",
+    topN,
+    excludeTags,
+  );
   writeToSheet("集計結果", data2D);
 }
