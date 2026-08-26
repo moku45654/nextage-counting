@@ -18,7 +18,15 @@ function writeToSheet(sheetName, data2D) {
     sheet = ss.insertSheet(sheetName);
   }
 
-  sheet.getRange(1, 1, data2D.length, data2D[0].length).setValues(data2D);
+  // 各行で列数が異なっていても正しく書き込めるよう、最大の列数に合わせて空白を埋める
+  const columnCount = Math.max(...data2D.map((row) => row.length));
+  const normalizedData = data2D.map((row) =>
+    row.concat(Array(columnCount - row.length).fill("")),
+  );
+
+  sheet
+    .getRange(1, 1, normalizedData.length, columnCount)
+    .setValues(normalizedData);
 }
 
 function clearSheetsByDates(dates) {
