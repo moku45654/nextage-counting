@@ -12,7 +12,6 @@ function runFetchAndWrite() {
     "title",
     "description",
     "userId",
-    "channelId",
     "viewCounter",
     "mylistCounter",
     "likeCounter",
