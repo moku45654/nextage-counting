@@ -1,4 +1,4 @@
-function aggregate(vocTags, honTag, d1, d2, sheetName) {
+function aggregate(vocTags, honTag, d1, d2, sheetName, topN = 30) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet1 = ss.getSheetByName(d1);
   const sheet2 = ss.getSheetByName(d2);
@@ -20,6 +20,7 @@ function aggregate(vocTags, honTag, d1, d2, sheetName) {
   const data1 = sheet1.getDataRange().getValues();
   const data2 = sheet2.getDataRange().getValues();
 
+  // ヘッダーのインデックスを取得する関数
   const getIndices = (headers) => ({
     id: headers.indexOf("contentId"),
     title: headers.indexOf("title"),
@@ -33,6 +34,7 @@ function aggregate(vocTags, honTag, d1, d2, sheetName) {
   const idx1 = getIndices(data1[0]);
   const idx2 = getIndices(data2[0]);
 
+  // 動画IDをキーにして、d1とd2のデータをマップに格納
   const map1 = new Map();
   for (let i = 1; i < data1.length; i++) {
     const row = data1[i];
@@ -63,17 +65,20 @@ function aggregate(vocTags, honTag, d1, d2, sheetName) {
     });
   }
 
-  const hasVocacolle = (tags) => vocacolleTags.some((t) => tags.includes(t));
-  const hasHonnext = (tags) =>
-    Array.isArray(honnextTag)
-      ? honnextTag.some((t) => tags.includes(t))
-      : tags.includes(honnextTag);
+  // ボカコレのタグがあるか、本ネクのタグがあるかを判定する関数
+  const hasVoc = (tags) => vocTags.some((t) => tags.includes(t));
+  const hasHon = (tags) =>
+    Array.isArray(honTag)
+      ? honTag.some((t) => tags.includes(t))
+      : tags.includes(honTag);
 
+  // X: ボカコレ＆本ネク一覧、Y: 本ネクのみ一覧
   const listX = [];
   const listY = [];
 
   map1.forEach((val1, id) => {
-    if (hasVocacolle(val1.tags) && hasHonnext(val1.tags)) {
+    // ボカコレのタグがあり、本ネクのタグもある場合はXリストに追加
+    if (hasVoc(val1.tags) && hasHon(val1.tags)) {
       const val2 = map2.get(id) || {
         title: val1.title,
         tags: val1.tags,
@@ -100,7 +105,8 @@ function aggregate(vocTags, honTag, d1, d2, sheetName) {
   });
 
   map2.forEach((val2, id) => {
-    if (hasHonnext(val2.tags) && !hasVocacolle(val2.tags)) {
+    // 本ネクのタグがあり、ボカコレのタグがない場合はYリストに追加
+    if (hasHon(val2.tags) && !hasVoc(val2.tags)) {
       const val1 = map1.get(id) || { view: 0, like: 0, comment: 0, mylist: 0 };
       listY.push({
         id,
@@ -125,7 +131,8 @@ function aggregate(vocTags, honTag, d1, d2, sheetName) {
     if (b.diff.like !== a.diff.like) return b.diff.like - a.diff.like;
     return b.diff.comment - a.diff.comment;
   });
-  const top20 = combined.slice(0, 20);
+  const topN = Math.min(topN, combined.length);
+  const topList = combined.slice(0, topN);
 
   const formatRows = (list) =>
     list.map((item) => [
@@ -167,9 +174,9 @@ function aggregate(vocTags, honTag, d1, d2, sheetName) {
   ];
 
   const outputData = [
-    ["上位20曲（マイリス差分順）"],
+    [`上位${topN}曲（マイリス差分順）`],
     headers,
-    ...formatRows(top20),
+    ...formatRows(topList),
     [],
     ["X: ボカコレ＆本ネク一覧"],
     headers,
