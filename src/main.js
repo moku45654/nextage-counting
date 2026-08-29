@@ -4,7 +4,7 @@ function runFetchAndWrite() {
     "ボカコレ2026夏ルーキー参加曲",
     "ボカコレ2026夏REMIX参加曲",
     "ボカコレ2026夏ex",
-    "本ネク新世界",
+    "本ネク新世界2026",
   ];
   const videos = getVideosByTags(tags);
   const fields = [
@@ -31,7 +31,7 @@ function runAggregateAndWrite() {
     "ボカコレ2026夏ルーキー参加曲",
     "ボカコレ2026夏ex",
   ];
-  const honTag = "本ネク新世界";
+  const honTag = "本ネク新世界2026";
   const topN = 30; // 上位N曲を取得する
   const excludeTags = ["ボカコレ2026夏REMIX参加曲"]; // 除外するタグを指定
   const startTimeFrom = "2026-09-18T17:00:00+09:00"; // 期間の開始日
