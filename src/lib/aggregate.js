@@ -1,19 +1,23 @@
-function aggregate(
+function getTargetContentIds(
+  candidateSheetName,
   vocTags,
   honTag,
-  d1,
-  d2,
-  sheetName,
-  topN = 30,
   excludeTags = [],
   startTimeFrom = null,
   startTimeTo = null,
 ) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet1 = ss.getSheetByName(d1);
-  const sheet2 = ss.getSheetByName(d2);
+  const candidateSheet = ss.getSheetByName(candidateSheetName);
+  if (!candidateSheet) return [];
 
-  if (!sheet1 || !sheet2) return;
+  const data = candidateSheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+
+  const headers = data[0];
+  const idIdx = headers.indexOf("contentId");
+  const tagsIdx = headers.indexOf("tags");
+  const startTimeIdx = headers.indexOf("startTime");
+  if (idIdx === -1 || tagsIdx === -1) return [];
 
   const excludeSheet = ss.getSheetByName("exclude");
   const excludeSet = new Set();
@@ -30,11 +34,52 @@ function aggregate(
     }
   }
 
-  // d1とd2時点のデータを取得
+  const hasExcludeTag = (tags) => excludeTags.some((tag) => tags.includes(tag));
+  const hasVoc = (tags) => vocTags.some((tag) => tags.includes(tag));
+  const hasHon = (tags) =>
+    Array.isArray(honTag)
+      ? honTag.some((tag) => tags.includes(tag))
+      : tags.includes(honTag);
+  const isWithinPeriod = (startTimeStr) => {
+    if (!startTimeFrom && !startTimeTo) return true;
+    if (!startTimeStr) return false;
+    const time = new Date(startTimeStr).getTime();
+    if (startTimeFrom && time < new Date(startTimeFrom).getTime()) return false;
+    if (startTimeTo && time >= new Date(startTimeTo).getTime()) return false;
+    return true;
+  };
+
+  const contentIds = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const id = String(row[idIdx] ?? "").trim();
+    const tags = String(row[tagsIdx]);
+    const startTime = startTimeIdx !== -1 ? row[startTimeIdx] : null;
+
+    if (
+      !id ||
+      excludeSet.has(id) ||
+      hasExcludeTag(tags) ||
+      !hasHon(tags) ||
+      (!hasVoc(tags) && !isWithinPeriod(startTime))
+    ) {
+      continue;
+    }
+    contentIds.push(id);
+  }
+  return contentIds;
+}
+
+function aggregate(contentIds, vocTags, d1, d2, sheetName, topN = 30) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet1 = ss.getSheetByName(d1);
+  const sheet2 = ss.getSheetByName(d2);
+
+  if (!sheet1 || !sheet2) return;
+
   const data1 = sheet1.getDataRange().getValues();
   const data2 = sheet2.getDataRange().getValues();
 
-  // ヘッダーのインデックスを取得する関数
   const getIndices = (headers) => ({
     id: headers.indexOf("contentId"),
     title: headers.indexOf("title"),
@@ -49,126 +94,69 @@ function aggregate(
   const idx1 = getIndices(data1[0]);
   const idx2 = getIndices(data2[0]);
 
-  const hasExcludeTag = (tags) => excludeTags.some((t) => tags.includes(t));
-
-  // 指定された期間内に投稿された動画かどうかを判定する関数
-  const isWithinPeriod = (startTimeStr) => {
-    if (!startTimeFrom && !startTimeTo) return true;
-    if (!startTimeStr) return false;
-    const time = new Date(startTimeStr).getTime();
-    if (startTimeFrom && time < new Date(startTimeFrom).getTime()) return false;
-    if (startTimeTo && time > new Date(startTimeTo).getTime()) return false;
-    return true;
+  const toMap = (data, indices) => {
+    const map = new Map();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const id = String(row[indices.id] ?? "").trim();
+      if (!id) continue;
+      map.set(id, {
+        title: row[indices.title],
+        tags: String(row[indices.tags]),
+        startTime: indices.startTime !== -1 ? row[indices.startTime] : null,
+        view: Number(row[indices.view]) || 0,
+        like: Number(row[indices.like]) || 0,
+        comment: Number(row[indices.comment]) || 0,
+        mylist: Number(row[indices.mylist]) || 0,
+      });
+    }
+    return map;
   };
-
-  // 動画IDをキーにして、d1とd2のデータをマップに格納
-  const map1 = new Map();
-  for (let i = 1; i < data1.length; i++) {
-    const row = data1[i];
-    const id = row[idx1.id];
-    const tags = String(row[idx1.tags]);
-    const startTime = idx1.startTime !== -1 ? row[idx1.startTime] : null;
-
-    if (excludeSet.has(id) || hasExcludeTag(tags) || !isWithinPeriod(startTime))
-      continue;
-
-    map1.set(id, {
-      title: row[idx1.title],
-      tags: tags,
-      view: Number(row[idx1.view]) || 0,
-      like: Number(row[idx1.like]) || 0,
-      comment: Number(row[idx1.comment]) || 0,
-      mylist: Number(row[idx1.mylist]) || 0,
-    });
-  }
-
-  const map2 = new Map();
-  for (let i = 1; i < data2.length; i++) {
-    const row = data2[i];
-    const id = row[idx2.id];
-    const tags = String(row[idx2.tags]);
-    const startTime = idx2.startTime !== -1 ? row[idx2.startTime] : null;
-
-    if (excludeSet.has(id) || hasExcludeTag(tags) || !isWithinPeriod(startTime))
-      continue;
-
-    map2.set(id, {
-      title: row[idx2.title],
-      tags: tags,
-      startTime: startTime,
-      view: Number(row[idx2.view]) || 0,
-      like: Number(row[idx2.like]) || 0,
-      comment: Number(row[idx2.comment]) || 0,
-      mylist: Number(row[idx2.mylist]) || 0,
-    });
-  }
-
-  // ボカコレのタグがあるか、本ネクのタグがあるかを判定する関数
-  const hasVoc = (tags) => vocTags.some((t) => tags.includes(t));
-  const hasHon = (tags) =>
-    Array.isArray(honTag)
-      ? honTag.some((t) => tags.includes(t))
-      : tags.includes(honTag);
+  const map1 = toMap(data1, idx1);
+  const map2 = toMap(data2, idx2);
+  const hasVoc = (tags) => vocTags.some((tag) => tags.includes(tag));
 
   // listX: ボカコレ参加曲が本ネクに参加したもの
   // listY: ボカコレに参加せず、新規曲で本ネクに参加したもの
   const listX = [];
   const listY = [];
 
-  // ボカコレ参加曲のうち、本ネクに参加したものを集める。
-  map1.forEach((val1, id) => {
-    // ボカコレのタグがあり、本ネクのタグもある場合はXリストに追加
-    if (hasVoc(val1.tags) && hasHon(val1.tags)) {
-      // d2のデータとの差分を計算する
-      const val2 = map2.get(id) || {
-        title: val1.title,
-        tags: val1.tags,
-        startTime: val1.startTime,
-        view: 0,
-        like: 0,
-        comment: 0,
-        mylist: 0,
-      };
-      listX.push({
-        id,
-        title: val2.title || val1.title,
-        tags: val2.tags || val1.tags,
-        startTime: val2.startTime || val1.startTime,
-        type: "X",
-        d1: val1,
-        d2: val2,
-        diff: {
-          view: val2.view - val1.view,
-          like: val2.like - val1.like,
-          comment: val2.comment - val1.comment,
-          mylist: val2.mylist - val1.mylist,
-        },
-      });
-    }
-  });
-
-  // ボカコレに参加せず、新規曲で本ネクに参加したものを集める。
-  map2.forEach((val2, id) => {
-    // 本ネクのタグがあり、ボカコレのタグがない場合はYリストに追加
-    if (hasHon(val2.tags) && !hasVoc(val2.tags)) {
-      // d1のデータは存在しないので、すべて0として扱う
-      const val1 = { startTime: null, view: 0, like: 0, comment: 0, mylist: 0 };
-      listY.push({
-        id,
-        title: val2.title,
-        tags: val2.tags,
-        startTime: val2.startTime,
-        type: "Y",
-        d1: val1,
-        d2: val2,
-        diff: {
-          view: val2.view - val1.view,
-          like: val2.like - val1.like,
-          comment: val2.comment - val1.comment,
-          mylist: val2.mylist - val1.mylist,
-        },
-      });
-    }
+  contentIds.forEach((id) => {
+    const val1 = map1.get(id) || {
+      title: "",
+      tags: "",
+      startTime: null,
+      view: 0,
+      like: 0,
+      comment: 0,
+      mylist: 0,
+    };
+    const val2 = map2.get(id) || {
+      title: "",
+      tags: "",
+      startTime: null,
+      view: 0,
+      like: 0,
+      comment: 0,
+      mylist: 0,
+    };
+    const latest = map2.has(id) ? val2 : val1;
+    const item = {
+      id,
+      title: latest.title || val1.title || val2.title,
+      tags: latest.tags || val1.tags || val2.tags,
+      startTime: latest.startTime || val1.startTime || val2.startTime,
+      type: hasVoc(val1.tags) || hasVoc(val2.tags) ? "X" : "Y",
+      d1: val1,
+      d2: val2,
+      diff: {
+        view: val2.view - val1.view,
+        like: val2.like - val1.like,
+        comment: val2.comment - val1.comment,
+        mylist: val2.mylist - val1.mylist,
+      },
+    };
+    (item.type === "X" ? listX : listY).push(item);
   });
 
   const combined = [...listX, ...listY];

@@ -24,6 +24,7 @@ function runFetchAndWrite() {
 }
 
 function runAggregateAndWrite() {
+  const candidateSheetName = "2026/09/20";
   const d1 = "2026/09/18";
   const d2 = "2026/10/01";
   const vocTags = [
@@ -36,17 +37,14 @@ function runAggregateAndWrite() {
   const topN = 30; // 上位N曲を取得する
   const excludeTags = []; // 除外するタグを指定
   const startTimeFrom = "2026-09-18T17:00:00+09:00"; // 期間の開始日
-  const startTimeTo = "2026-09-20T00:00:00+09:00"; // 期間の終了日
-  const data2D = aggregate(
+  const startTimeTo = "2026-09-20T00:00:00+09:00"; // 期間の終了（この時刻は含まない）
+  const contentIds = getTargetContentIds(
+    candidateSheetName,
     vocTags,
     honTag,
-    d1,
-    d2,
-    "集計結果",
-    topN,
     excludeTags,
     startTimeFrom,
     startTimeTo,
   );
-  writeToSheet("集計結果", data2D);
+  aggregate(contentIds, vocTags, d1, d2, "集計結果", topN);
 }
