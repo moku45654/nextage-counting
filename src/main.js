@@ -29,11 +29,12 @@ function runAggregateAndWrite() {
   const vocTags = [
     "ボカコレ2026夏TOP100ランキング参加曲",
     "ボカコレ2026夏ルーキー参加曲",
+    "ボカコレ2026夏REMIX参加曲",
     "ボカコレ2026夏ex",
   ];
   const honTag = "本ネク新世界2026";
   const topN = 30; // 上位N曲を取得する
-  const excludeTags = ["ボカコレ2026夏REMIX参加曲"]; // 除外するタグを指定
+  const excludeTags = []; // 除外するタグを指定
   const startTimeFrom = "2026-09-18T17:00:00+09:00"; // 期間の開始日
   const startTimeTo = "2026-09-20T00:00:00+09:00"; // 期間の終了日
   const data2D = aggregate(
