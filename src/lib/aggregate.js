@@ -6,6 +6,7 @@ function getTargetContentIds(
   startTimeFrom = null,
   startTimeTo = null,
 ) {
+  // 投稿期間終了直後のシートから、ボカコレ参加曲の本ネク参加曲を抽出する
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const candidateSheet = ss.getSheetByName(candidateSheetName);
   if (!candidateSheet) return [];
@@ -19,6 +20,7 @@ function getTargetContentIds(
   const startTimeIdx = headers.indexOf("startTime");
   if (idIdx === -1 || tagsIdx === -1) return [];
 
+  // 除外リストのcontentIdをセットに格納
   const excludeSheet = ss.getSheetByName("exclude");
   const excludeSet = new Set();
   if (excludeSheet) {
@@ -49,6 +51,7 @@ function getTargetContentIds(
     return true;
   };
 
+  // 条件に合致するcontentIdを抽出
   const contentIds = [];
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
@@ -56,6 +59,11 @@ function getTargetContentIds(
     const tags = String(row[tagsIdx]);
     const startTime = startTimeIdx !== -1 ? row[startTimeIdx] : null;
 
+    // もし以下のいずれかの場合はスキップ。
+    // 1. 除外リストのシートに含まれる
+    // 2. 除外タグが含まれる
+    // 3. 本ネク参加曲でない
+    // 4. 新規投稿曲（ボカコレ参加曲でない）でかつ投稿期間外
     if (
       !id ||
       excludeSet.has(id) ||
@@ -116,36 +124,23 @@ function aggregate(contentIds, vocTags, d1, d2, sheetName, topN = 30) {
   const map2 = toMap(data2, idx2);
   const hasVoc = (tags) => vocTags.some((tag) => tags.includes(tag));
 
-  // listX: ボカコレ参加曲が本ネクに参加したもの
-  // listY: ボカコレに参加せず、新規曲で本ネクに参加したもの
-  const listX = [];
-  const listY = [];
-
-  contentIds.forEach((id) => {
-    const val1 = map1.get(id) || {
-      title: "",
-      tags: "",
-      startTime: null,
-      view: 0,
-      like: 0,
-      comment: 0,
-      mylist: 0,
-    };
-    const val2 = map2.get(id) || {
-      title: "",
-      tags: "",
-      startTime: null,
-      view: 0,
-      like: 0,
-      comment: 0,
-      mylist: 0,
-    };
-    const latest = map2.has(id) ? val2 : val1;
-    const item = {
+  const emptyStats = {
+    title: "",
+    tags: "",
+    startTime: null,
+    view: 0,
+    like: 0,
+    comment: 0,
+    mylist: 0,
+  };
+  const combined = contentIds.map((id) => {
+    const val1 = map1.get(id) || emptyStats;
+    const val2 = map2.get(id) || emptyStats;
+    return {
       id,
-      title: latest.title || val1.title || val2.title,
-      tags: latest.tags || val1.tags || val2.tags,
-      startTime: latest.startTime || val1.startTime || val2.startTime,
+      title: val2.title || val1.title,
+      tags: val2.tags || val1.tags,
+      startTime: val2.startTime || val1.startTime,
       type: hasVoc(val1.tags) || hasVoc(val2.tags) ? "X" : "Y",
       d1: val1,
       d2: val2,
@@ -156,17 +151,17 @@ function aggregate(contentIds, vocTags, d1, d2, sheetName, topN = 30) {
         mylist: val2.mylist - val1.mylist,
       },
     };
-    (item.type === "X" ? listX : listY).push(item);
   });
 
-  const combined = [...listX, ...listY];
+  const listX = combined.filter((item) => item.type === "X");
+  const listY = combined.filter((item) => item.type === "Y");
   combined.sort((a, b) => {
     if (b.diff.mylist !== a.diff.mylist) return b.diff.mylist - a.diff.mylist;
     if (b.diff.like !== a.diff.like) return b.diff.like - a.diff.like;
     return b.diff.comment - a.diff.comment;
   });
-  var topN = Math.min(topN, combined.length);
-  const topList = combined.slice(0, topN);
+  const displayCount = Math.min(topN, combined.length);
+  const topList = combined.slice(0, displayCount);
 
   const formatRows = (list) =>
     list.map((item) => [
@@ -210,7 +205,7 @@ function aggregate(contentIds, vocTags, d1, d2, sheetName, topN = 30) {
   ];
 
   const outputData = [
-    [`上位${topN}曲（マイリス差分順）`],
+    [`上位${displayCount}曲（マイリス差分順）`],
     headers,
     ...formatRows(topList),
     [],
