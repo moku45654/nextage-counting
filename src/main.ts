@@ -48,7 +48,7 @@ function runAggregateAndWrite(): void {
 
   const d1 = "2026/09/18";
   const d2 = "2026/10/01";
-  const topN = 30;
+  const topN = null;
   const betaTeamBattleTag = "本ネクβ版チーム戦";
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss.getSheetByName(d1) || !ss.getSheetByName(d2)) return;
