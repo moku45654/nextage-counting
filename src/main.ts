@@ -26,7 +26,7 @@ function runFetchAndWrite(): void {
 
 /** 対象動画と2時点のデータを集計し、結果シートへ順に書き込む。 */
 function runAggregateAndWrite(): void {
-  const candidateSheetName = "2026/09/20";
+  const candidateSheetName = "2026/09/21";
   const vocTags = [
     "ボカコレ2026夏TOP100ランキング参加曲",
     "ボカコレ2026夏ルーキー参加曲",
@@ -46,8 +46,8 @@ function runAggregateAndWrite(): void {
     startTimeTo,
   );
 
-  const d1 = "2026/09/18";
-  const d2 = "2026/10/01";
+  const d1 = "2026/09/19";
+  const d2 = "2026/10/02";
   const topN = null;
   const betaTeamBattleTag = "本ネクβ版チーム戦";
   const ss = SpreadsheetApp.getActiveSpreadsheet();
