@@ -39,7 +39,7 @@ function testApplyBetaTeamBattlePenalty(): void {
     makeItem("partial", `${teamBattleTag}参加`, "", 4, 1),
   ];
 
-  const results = applyBetaTeamBattlePenalty(items);
+  const results = applyBetaTeamBattlePenalty(items, teamBattleTag);
   if (results[0].diff.mylist !== 4 || results[1].diff.mylist !== 7) {
     throw new Error("チーム戦タグのマイリス差分が補正されていません");
   }
@@ -87,6 +87,29 @@ function testAggregateAndWrite(): void {
     d1,
     d2,
     topN,
+    "本ネクβ版チーム戦",
   );
   writeAggregateOutput("集計結果", outputData);
+}
+
+/** topNがnullの場合に対象動画をすべて上位一覧へ含める。 */
+function testBuildAggregateOutputDataWithoutTopNLimit(): void {
+  const outputData = buildAggregateOutputData(
+    ["sm1", "sm2"],
+    [],
+    [],
+    [],
+    "d1",
+    "d2",
+    null,
+    null,
+  );
+  if (outputData[0][0] !== "上位2曲（マイリス差分順）") {
+    throw new Error("topNがnullの場合に全件が上位一覧へ含まれていません");
+  }
+  if (outputData[1][16] !== "差分_マイリス") {
+    throw new Error(
+      "チーム戦タグが未指定なのに補正用の見出しが表示されています",
+    );
+  }
 }

@@ -96,8 +96,10 @@ function getTargetContentIds(
  * @param items 補正前の集計済み動画データ
  * @returns 補正後の動画データ
  */
-function applyBetaTeamBattlePenalty(items: AggregateItem[]): AggregateItem[] {
-  const teamBattleTag = "本ネクβ版チーム戦";
+function applyBetaTeamBattlePenalty(
+  items: AggregateItem[],
+  teamBattleTag: string,
+): AggregateItem[] {
   return items.map((item) => {
     const tags = [item.d1.tags, item.d2.tags].join(" ").split(/\s+/);
     if (!tags.includes(teamBattleTag)) return item;
@@ -121,8 +123,8 @@ function applyBetaTeamBattlePenalty(items: AggregateItem[]): AggregateItem[] {
  * @param data2 終了日時点の動画レコード
  * @param d1 開始日時点のシート名
  * @param d2 終了日時点のシート名
- * @param topN 上位一覧に表示する件数
- * @param betaTeamBattlePenaltyEnabled β版チーム戦補正を適用するか
+ * @param topN 上位一覧に表示する件数。nullの場合は全件
+ * @param betaTeamBattleTag β版チーム戦タグ
  * @returns シートへの書き込み用データ
  */
 function buildAggregateOutputData(
@@ -132,8 +134,8 @@ function buildAggregateOutputData(
   data2: SheetRecord[],
   d1: string,
   d2: string,
-  topN = 30,
-  betaTeamBattlePenaltyEnabled = true,
+  topN: number | null = 30,
+  betaTeamBattleTag: string | null = null,
 ): SheetCell[][] {
   const toMap = (records: SheetRecord[]): Map<string, VideoStatistics> => {
     const map = new Map<string, VideoStatistics>();
@@ -187,8 +189,8 @@ function buildAggregateOutputData(
     };
   });
 
-  const results = betaTeamBattlePenaltyEnabled
-    ? applyBetaTeamBattlePenalty(combined)
+  const results = betaTeamBattleTag
+    ? applyBetaTeamBattlePenalty(combined, betaTeamBattleTag)
     : combined;
   const listX = results.filter((item) => item.type === "X");
   const listY = results.filter((item) => item.type === "Y");
@@ -198,7 +200,8 @@ function buildAggregateOutputData(
     return b.diff.comment - a.diff.comment;
   });
 
-  const displayCount = Math.min(topN, results.length);
+  const displayCount =
+    topN === null ? results.length : Math.min(topN, results.length);
   const topList = results.slice(0, displayCount);
   const formatRows = (list: AggregateItem[]): SheetCell[][] =>
     list.map((item) => [
@@ -238,7 +241,7 @@ function buildAggregateOutputData(
     "差分_再生",
     "差分_いいね",
     "差分_コメ",
-    betaTeamBattlePenaltyEnabled
+    betaTeamBattleTag
       ? "差分_マイリス（β版チーム戦は-1補正）"
       : "差分_マイリス",
   ];
