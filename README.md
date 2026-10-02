@@ -14,6 +14,13 @@
 
 ## 実行方法
 
+TypeScriptのソースを変更してApps Scriptへ反映する場合は、コンパイルしてからpushする。
+
+```bash
+npm run build
+npx clasp push
+```
+
 GASのトリガーまたはGitHub Actionsから毎日AM 5時以降に動画データを取得する。
 
 ```bash

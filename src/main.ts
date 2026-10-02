@@ -1,4 +1,5 @@
-function runFetchAndWrite() {
+/** ニコニコ動画から対象動画を取得し、当日分のシートへ書き込む。 */
+function runFetchAndWrite(): void {
   const tags = [
     "ボカコレ2026夏TOP100ランキング参加曲",
     "ボカコレ2026夏ルーキー参加曲",
@@ -7,7 +8,7 @@ function runFetchAndWrite() {
     "本ネク新世界2026",
   ];
   const videos = getVideosByTags(tags);
-  const fields = [
+  const fields: (keyof NiconicoVideo & string)[] = [
     "contentId",
     "title",
     "userId",
@@ -23,7 +24,8 @@ function runFetchAndWrite() {
   writeToSheet(getLogicalDate(), data2D);
 }
 
-function runAggregateAndWrite() {
+/** 対象動画と2時点のデータを集計し、結果シートへ順に書き込む。 */
+function runAggregateAndWrite(): void {
   const candidateSheetName = "2026/09/20";
   const vocTags = [
     "ボカコレ2026夏TOP100ランキング参加曲",
@@ -32,9 +34,9 @@ function runAggregateAndWrite() {
     "ボカコレ2026夏ex",
   ];
   const honTag = "本ネク新世界2026";
-  const excludeTags = []; // 除外するタグを指定
-  const startTimeFrom = "2026-09-18T17:00:00+09:00"; // 期間の開始日
-  const startTimeTo = "2026-09-20T00:00:00+09:00"; // 期間の終了（この時刻は含まない）
+  const excludeTags: string[] = [];
+  const startTimeFrom = "2026-09-18T17:00:00+09:00";
+  const startTimeTo = "2026-09-20T00:00:00+09:00";
   const contentIds = getTargetContentIds(
     candidateSheetName,
     vocTags,
@@ -46,6 +48,20 @@ function runAggregateAndWrite() {
 
   const d1 = "2026/09/18";
   const d2 = "2026/10/01";
-  const topN = 30; // 上位N曲を取得する
-  aggregate(contentIds, vocTags, d1, d2, "集計結果", topN);
+  const topN = 30;
+  const betaTeamBattlePenaltyEnabled = true;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss.getSheetByName(d1) || !ss.getSheetByName(d2)) return;
+
+  const outputData = buildAggregateOutputData(
+    contentIds,
+    vocTags,
+    getSheetAsObjects(d1),
+    getSheetAsObjects(d2),
+    d1,
+    d2,
+    topN,
+    betaTeamBattlePenaltyEnabled,
+  );
+  writeAggregateOutput("集計結果", outputData);
 }
